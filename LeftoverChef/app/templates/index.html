@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if offline %}
+<div class="banner">Offline mode: using built-in recipes.</div>
+{% endif %}
+
+<section class="card">
+  <h2>Your ingredients</h2>
+  <form id="ing-form" method="post" action="/plan" class="stack">
+    <div id="rows" class="stack">
+      {% if ingredients_list and ingredients_list|length > 0 %}
+        {% for name, exp in ingredients_list %}
+          {% set name_val = name %}
+          {% set expiry_val = exp %}
+          {% include "partials/ingredient_row.html" %}
+        {% endfor %}
+      {% else %}
+        {% set name_val = '' %}
+        {% set expiry_val = '' %}
+        {% include "partials/ingredient_row.html" %}
+      {% endif %}
+    </div>
+    <datalist id="common-ingredients">
+      <option value="egg"><option value="eggs"><option value="tomato"><option value="rice">
+      <option value="bread"><option value="garlic"><option value="pasta"><option value="onion">
+      <option value="cheese"><option value="bell pepper"><option value="cucumber"><option value="basil">
+    </datalist>
+    <div class="row actions">
+      <button type="button" hx-post="/row" hx-target="#rows" hx-swap="beforeend">Add row</button>
+      <button type="submit">Generate suggestions</button>
+    </div>
+  </form>
+</section>
+
+{% if use_first and use_first|length > 0 %}
+<section class="card fadein">
+  <h3>Use first</h3>
+  <ul>
+    {% for it in use_first %}
+      <li><strong>{{ it.name }}</strong>{% if it.expiry %} — use by: {{ it.expiry }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if outdated and outdated|length > 0 %}
+<section class="card fadein">
+  <h3>Outdated <span class="tip" tabindex="0">?<span class="tiptext">Expired items are excluded from matching</span></span></h3>
+  <ul class="outdated">
+    {% for n,e in outdated %}
+      <li><strong>{{ n }}</strong>{% if e %} — expired: {{ e }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="card fadein">
+  <h2>Suggestions</h2>
+  {% if all_outdated %}
+    <p>All provided ingredients are outdated. Remove or update dates to see matches.</p>
+  {% elif suggestions and suggestions|length > 0 %}
+    <ol>
+      {% for s in suggestions %}
+        <li>{{ s }}</li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p>No suggestions yet. Add ingredients and submit.</p>
+  {% endif %}
+</section>
+
+<section class="card fadein">
+  <h2>Top recipes</h2>
+  {% if all_outdated %}
+    <p>No recipes because all ingredients are outdated.</p>
+  {% elif recipes and recipes|length > 0 %}
+    <div class="grid">
+      {% for rec in recipes %}
+        <article class="tile">
+          <h4>{{ rec.title }}</h4>
+          <p class="meta">match {{ '%.2f'|format(rec.score) }}{% if rec.minutes %} • {{ rec.minutes }} min{% endif %}</p>
+          <p>{{ rec.directions[:180] }}{% if rec.directions|length > 180 %}…{% endif %}</p>
+          <a class="btn" href="/recipe/{{ rec.id }}">View</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No matching recipes yet.</p>
+  {% endif %}
+</section>
+
+<section class="card fadein">
+  <h2>AI suggestions</h2>
+  <div class="row">
+    <button type="button" id="ai-local-btn" onclick="aiSuggestLocal()">Local Ideas (free)</button>
+    <button type="button" id="ai-browser-btn" onclick="aiSuggestBrowser()">Browser AI</button>
+    <button type="button" id="ai-btn" onclick="aiSuggest()">Try API</button>
+  </div>
+  <pre id="ai-out"></pre>
+  <p class="meta">Local Ideas run fully in your browser. No accounts, no downloads.</p>
+</section>
+
+{% endblock %}
